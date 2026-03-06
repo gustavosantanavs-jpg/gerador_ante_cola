@@ -7,18 +7,13 @@ import re
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Gerador Anti-Cola", page_icon="📝")
-st.title("📚 Gerador de Provas - Anti-Cola")
-st.write("Faça o upload da prova original em Word (.docx). O sistema irá embaralhar as questões, alternativas e manter as imagens (mesmo na mesma linha) intactas.")
+st.title("📚 Gerador de Provas - Profa. Milena")
+st.write("Faça o upload da prova original em Word (.docx). O sistema irá embaralhar as questões, alternativas e criar um Gabarito Automático no final.")
+st.info("⚠️ Lembre-se da regra de ouro: No arquivo original, a resposta CERTA deve ser sempre a PRIMEIRA alternativa (a letra 'a)'). O sistema vai rastrear onde ela for parar e montar o gabarito.")
 
 # --- FUNÇÃO CIRÚRGICA PARA MANTER IMAGENS E NEGRITO ---
 def atualizar_paragrafo(paragrafo, padrao, novo_texto, aplicar_negrito=False):
-    """
-    Substitui o número da questão/alternativa preservando imagens in-line
-    e outras formatações do resto do parágrafo.
-    """
     texto_completo = paragrafo.text
-    
-    # CORREÇÃO AQUI: Removido o comando duplicado que estava causando o erro vermelho
     match = padrao.match(texto_completo) 
     if not match: return
     
@@ -50,7 +45,7 @@ def atualizar_paragrafo(paragrafo, padrao, novo_texto, aplicar_negrito=False):
         if aplicar_negrito:
             ultima_run_alterada.bold = True
 
-# --- MOTOR PRINCIPAL ---
+# --- MOTOR PRINCIPAL COM GABARITO ---
 def processar_prova_com_imagens(doc_original):
     padrao_questao = re.compile(r'^\s*(Questão\s*)?\d+[\.\-\:]?\s*', re.IGNORECASE)
     padrao_alternativa = re.compile(r'^\s*[a-e][\)\.\-]\s*', re.IGNORECASE)
@@ -62,7 +57,7 @@ def processar_prova_com_imagens(doc_original):
     alternativa_atual = None
     cabecalho = []
     
-    # 1. ESCANEAMENTO AVANÇADO
+    # 1. ESCANEAMENTO AVANÇADO E MARCAÇÃO DA RESPOSTA CERTA
     for element in list(body):
         if element.tag.endswith('sectPr'):
             continue
@@ -81,12 +76,14 @@ def processar_prova_com_imagens(doc_original):
             alternativa_atual = None
             
         elif is_paragraph and padrao_alternativa.match(texto) and questao_atual is not None:
-            alternativa_atual = [element]
+            # A mágica do gabarito: Se a lista de alternativas estiver vazia, esta é a primeira (a correta)
+            is_correct = (len(questao_atual['alternativas']) == 0)
+            alternativa_atual = {'blocos': [element], 'correta': is_correct}
             questao_atual['alternativas'].append(alternativa_atual)
             
         else:
             if alternativa_atual is not None:
-                alternativa_atual.append(element)
+                alternativa_atual['blocos'].append(element)
             elif questao_atual is not None:
                 questao_atual['enunciado'].append(element)
             else:
@@ -105,8 +102,13 @@ def processar_prova_com_imagens(doc_original):
     for el in cabecalho:
         body.append(el)
 
+    gabarito_final = {}
+    letras_maiusculas = ['A', 'B', 'C', 'D', 'E', 'F']
+    letras_formatadas = ['a) ', 'b) ', 'c) ', 'd) ', 'e) ', 'f) ']
+
     contador_questao = 1
     for q in questoes:
+        # Cola e renumera a questão
         p_xml = q['enunciado'][0]
         body.append(p_xml)
         p_obj = Paragraph(p_xml, doc_original)
@@ -115,17 +117,31 @@ def processar_prova_com_imagens(doc_original):
         for el in q['enunciado'][1:]:
             body.append(el)
             
-        letras = ['a) ', 'b) ', 'c) ', 'd) ', 'e) ', 'f) ']
+        # Cola e renumera as alternativas
         for idx_alt, alt in enumerate(q['alternativas']):
-            p_xml_alt = alt[0]
+            if alt['correta']:
+                # Se esta for a marcada como correta, salva a letra nova no dicionário
+                gabarito_final[contador_questao] = letras_maiusculas[idx_alt]
+                
+            p_xml_alt = alt['blocos'][0]
             body.append(p_xml_alt)
             p_obj_alt = Paragraph(p_xml_alt, doc_original)
-            atualizar_paragrafo(p_obj_alt, padrao_alternativa, letras[idx_alt], aplicar_negrito=False)
+            atualizar_paragrafo(p_obj_alt, padrao_alternativa, letras_formatadas[idx_alt], aplicar_negrito=False)
             
-            for el in alt[1:]:
+            for el in alt['blocos'][1:]:
                 body.append(el)
                 
         contador_questao += 1
+
+    # 4. IMPRIMINDO O GABARITO NO FINAL DO DOCUMENTO
+    doc_original.add_page_break() # Quebra de página para o gabarito ficar sozinho
+    p_titulo = doc_original.add_paragraph()
+    run_titulo = p_titulo.add_run("--- GABARITO ---")
+    run_titulo.bold = True
+    
+    for q_num in range(1, contador_questao):
+        if q_num in gabarito_final:
+            doc_original.add_paragraph(f"Questão {q_num}: {gabarito_final[q_num]}")
 
     return doc_original
 
@@ -135,10 +151,8 @@ qtd_versoes = st.number_input("Quantas versões diferentes você quer gerar?", m
 
 if arquivo_prova is not None:
     if st.button("Embaralhar e Gerar Provas"):
-        with st.spinner("Realizando cirurgia no arquivo para preservar imagens e formatações..."):
+        with st.spinner("Embaralhando tudo e calculando os gabaritos..."):
             try:
-                doc_original = Document(arquivo_prova)
-                
                 for i in range(int(qtd_versoes)):
                     doc_base = Document(arquivo_prova)
                     novo_doc = processar_prova_com_imagens(doc_base)
@@ -151,8 +165,9 @@ if arquivo_prova is not None:
                         label=f"⬇️ Baixar Prova - Versão {i+1}",
                         data=buffer,
                         file_name=f"Prova_AntiCola_Versao_{i+1}.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        key=f"download_{i}"
                     )
-                st.success("✨ Sucesso! Provas geradas com formatação e imagens originais:")
+                st.success("✨ Sucesso! Provas geradas com formatação original e gabarito no final.")
             except Exception as e:
                 st.error(f"Ocorreu um erro ao processar o arquivo. Erro técnico: {e}")
