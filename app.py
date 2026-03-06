@@ -4,16 +4,72 @@ from docx.text.paragraph import Paragraph
 import io
 import random
 import re
+import base64
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Sistema Anti-Cola Pro", page_icon="🎓")
 
-# --- IMAGEM DE TOPO ---
-# Tenta carregar a imagem. Se o arquivo ainda não estiver no GitHub, o site não quebra.
-try:
-    st.image("logo.png", use_container_width=True)
-except:
-    pass
+# --- FUNÇÃO PARA COLOCAR IMAGEM DE FUNDO ---
+def adicionar_fundo_de_tela(arquivo_imagem):
+    try:
+        with open(arquivo_imagem, "rb") as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode()
+        
+        # Injeta o CSS para o fundo de tela e uma caixa branca translúcida para facilitar a leitura
+        st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: url(data:image/png;base64,{encoded_string});
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }}
+        .block-container {{
+            background-color: rgba(255, 255, 255, 0.90); /* Fundo branco 90% transparente */
+            padding: 2rem;
+            border-radius: 15px;
+            margin-top: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+        )
+    except Exception as e:
+        pass # Se a imagem não for encontrada, o site não quebra, apenas fica com fundo branco
+
+adicionar_fundo_de_tela("logo.png") # Nome do arquivo da imagem que você subiu no GitHub
+
+# --- SISTEMA DE LOGIN ---
+if 'logado' not in st.session_state:
+    st.session_state['logado'] = False
+
+if not st.session_state['logado']:
+    st.markdown("<h2 style='text-align: center; color: #1E3A8A;'>Acesso Restrito</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center;'>Por favor, insira suas credenciais para acessar o gerador.</p>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        usuario = st.text_input("Usuário")
+        senha = st.text_input("Senha", type="password") # type="password" esconde o que é digitado
+        
+        if st.button("Entrar", use_container_width=True):
+            # ---- AQUI VOCÊ MUDA O USUÁRIO E A SENHA ----
+            if usuario == "milena" and senha == "unimam2026":
+                st.session_state['logado'] = True
+                st.rerun() # Recarrega a página agora com acesso liberado
+            else:
+                st.error("Usuário ou senha incorretos!")
+    
+    # st.stop() faz com que o código não leia nada daqui para baixo se não estiver logado
+    st.stop()
+
+
+# =====================================================================
+# --- A PARTIR DAQUI SÓ APARECE SE O LOGIN ESTIVER CORRETO ---
+# =====================================================================
 
 st.title("📚 Sistema Anti-Cola Pro - Profa. Milena")
 st.write("Faça o upload da prova original em Word (.docx). O sistema irá embaralhar as questões, alternativas e criar um Gabarito Automático no final.")
@@ -59,7 +115,6 @@ def processar_prova_com_imagens(doc_original):
     padrao_alternativa = re.compile(r'^\s*[a-e][\)\.\-]\s*', re.IGNORECASE)
 
     body = doc_original.element.body
-    
     questoes = []
     questao_atual = None
     alternativa_atual = None
@@ -149,7 +204,7 @@ def processar_prova_com_imagens(doc_original):
 
     return doc_original
 
-# --- INTERFACE ---
+# --- INTERFACE (APARECE APÓS O LOGIN) ---
 arquivo_prova = st.file_uploader("Selecione o arquivo da prova (.docx)", type=["docx"])
 qtd_versoes = st.number_input("Quantas versões diferentes você quer gerar?", min_value=1, max_value=10, value=2)
 
