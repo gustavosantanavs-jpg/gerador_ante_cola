@@ -17,7 +17,9 @@ def atualizar_paragrafo(paragrafo, padrao, novo_texto, aplicar_negrito=False):
     e outras formatações do resto do parágrafo.
     """
     texto_completo = paragrafo.text
-    match = re.match(padrao, texto_completo, re.IGNORECASE)
+    
+    # CORREÇÃO AQUI: Removido o comando duplicado que estava causando o erro vermelho
+    match = padrao.match(texto_completo) 
     if not match: return
     
     tamanho_padrao = match.end()
@@ -25,10 +27,9 @@ def atualizar_paragrafo(paragrafo, padrao, novo_texto, aplicar_negrito=False):
     runs_modificadas = False
     ultima_run_alterada = None
     
-    # O Word divide a linha em pedaços (runs). Imagens ficam em runs sem texto.
     for run in paragrafo.runs:
         texto_original = run.text
-        if not texto_original: # Pula as partes da linha que têm imagens (sem texto)
+        if not texto_original: 
             continue
             
         if not runs_modificadas:
@@ -36,7 +37,7 @@ def atualizar_paragrafo(paragrafo, padrao, novo_texto, aplicar_negrito=False):
             ultima_run_alterada = run
             
             if len(texto_acumulado) <= tamanho_padrao:
-                run.text = "" # Apaga o número antigo
+                run.text = "" 
             else:
                 sobra = texto_acumulado[tamanho_padrao:]
                 run.text = novo_texto + sobra
@@ -44,7 +45,6 @@ def atualizar_paragrafo(paragrafo, padrao, novo_texto, aplicar_negrito=False):
                     run.bold = True
                 runs_modificadas = True
                 
-    # Se o número antigo ocupava o bloco perfeito e não sobrou texto
     if not runs_modificadas and ultima_run_alterada is not None:
         ultima_run_alterada.text = novo_texto
         if aplicar_negrito:
@@ -107,7 +107,6 @@ def processar_prova_com_imagens(doc_original):
 
     contador_questao = 1
     for q in questoes:
-        # Renumera a questão aplicando negrito!
         p_xml = q['enunciado'][0]
         body.append(p_xml)
         p_obj = Paragraph(p_xml, doc_original)
@@ -116,7 +115,6 @@ def processar_prova_com_imagens(doc_original):
         for el in q['enunciado'][1:]:
             body.append(el)
             
-        # Renumera as alternativas (sem forçar negrito)
         letras = ['a) ', 'b) ', 'c) ', 'd) ', 'e) ', 'f) ']
         for idx_alt, alt in enumerate(q['alternativas']):
             p_xml_alt = alt[0]
@@ -140,7 +138,6 @@ if arquivo_prova is not None:
         with st.spinner("Realizando cirurgia no arquivo para preservar imagens e formatações..."):
             try:
                 doc_original = Document(arquivo_prova)
-                st.success("✨ Sucesso! Provas geradas com formatação e imagens originais:")
                 
                 for i in range(int(qtd_versoes)):
                     doc_base = Document(arquivo_prova)
@@ -156,5 +153,6 @@ if arquivo_prova is not None:
                         file_name=f"Prova_AntiCola_Versao_{i+1}.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
+                st.success("✨ Sucesso! Provas geradas com formatação e imagens originais:")
             except Exception as e:
                 st.error(f"Ocorreu um erro ao processar o arquivo. Erro técnico: {e}")
