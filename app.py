@@ -9,13 +9,12 @@ import base64
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Sistema Anti-Cola Pro", page_icon="🎓")
 
-# --- FUNÇÃO PARA COLOCAR IMAGEM DE FUNDO ---
+# --- FUNÇÃO PARA COLOCAR APENAS A IMAGEM DE FUNDO ---
 def adicionar_fundo_de_tela(arquivo_imagem):
     try:
         with open(arquivo_imagem, "rb") as image_file:
             encoded_string = base64.b64encode(image_file.read()).decode()
         
-        # Injeta o CSS para o fundo de tela e uma caixa branca translúcida para facilitar a leitura
         st.markdown(
         f"""
         <style>
@@ -26,50 +25,70 @@ def adicionar_fundo_de_tela(arquivo_imagem):
             background-repeat: no-repeat;
             background-attachment: fixed;
         }}
-        .block-container {{
-            background-color: rgba(255, 255, 255, 0.90); /* Fundo branco 90% transparente */
-            padding: 2rem;
-            border-radius: 15px;
-            margin-top: 2rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }}
         </style>
         """,
         unsafe_allow_html=True
         )
     except Exception as e:
-        pass # Se a imagem não for encontrada, o site não quebra, apenas fica com fundo branco
+        pass 
 
-adicionar_fundo_de_tela("logo.png") # Nome do arquivo da imagem que você subiu no GitHub
+adicionar_fundo_de_tela("logo.png") 
 
 # --- SISTEMA DE LOGIN ---
 if 'logado' not in st.session_state:
     st.session_state['logado'] = False
 
 if not st.session_state['logado']:
+    # CSS EXCLUSIVO DA TELA DE LOGIN (Caixa menor e empurrada para baixo)
+    st.markdown("""
+        <style>
+        .block-container {
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 2.5rem;
+            border-radius: 15px;
+            margin-top: 50vh; /* Empurra a caixa para a metade de baixo da tela */
+            max-width: 450px; /* Deixa a caixa mais estreita e elegante */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
     st.markdown("<h2 style='text-align: center; color: #1E3A8A;'>Acesso Restrito</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center;'>Por favor, insira suas credenciais para acessar o gerador.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center;'>Insira suas credenciais para acessar o gerador.</p>", unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        usuario = st.text_input("Usuário")
-        senha = st.text_input("Senha", type="password") # type="password" esconde o que é digitado
-        
-        if st.button("Entrar", use_container_width=True):
-            # ---- AQUI VOCÊ MUDA O USUÁRIO E A SENHA ----
-            if usuario == "milena" and senha == "unimam2026":
-                st.session_state['logado'] = True
-                st.rerun() # Recarrega a página agora com acesso liberado
-            else:
-                st.error("Usuário ou senha incorretos!")
+    usuario = st.text_input("Usuário")
+    senha = st.text_input("Senha", type="password")
     
-    # st.stop() faz com que o código não leia nada daqui para baixo se não estiver logado
+    # Adicionando um espaço extra antes do botão
+    st.write("")
+    
+    if st.button("Entrar", use_container_width=True):
+        if usuario == "milena" and senha == "unimam2026":
+            st.session_state['logado'] = True
+            st.rerun() 
+        else:
+            st.error("Usuário ou senha incorretos!")
+    
     st.stop()
 
 
 # =====================================================================
 # --- A PARTIR DAQUI SÓ APARECE SE O LOGIN ESTIVER CORRETO ---
 # =====================================================================
+
+# CSS EXCLUSIVO DO APLICATIVO (Caixa larga e no topo)
+st.markdown("""
+    <style>
+    .block-container {
+        background-color: rgba(255, 255, 255, 0.95);
+        padding: 3rem;
+        border-radius: 15px;
+        margin-top: 5vh; /* Puxa a caixa para perto do topo */
+        max-width: 800px; /* Deixa a caixa larga para trabalhar com a prova */
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 st.title("📚 Sistema Anti-Cola Pro - Profa. Milena")
 st.write("Faça o upload da prova original em Word (.docx). O sistema irá embaralhar as questões, alternativas e criar um Gabarito Automático no final.")
@@ -120,7 +139,6 @@ def processar_prova_com_imagens(doc_original):
     alternativa_atual = None
     cabecalho = []
     
-    # 1. ESCANEAMENTO AVANÇADO E MARCAÇÃO DA RESPOSTA CERTA
     for element in list(body):
         if element.tag.endswith('sectPr'):
             continue
@@ -151,12 +169,10 @@ def processar_prova_com_imagens(doc_original):
             else:
                 cabecalho.append(element)
 
-    # 2. EMBARALHAMENTO
     random.shuffle(questoes)
     for q in questoes:
         random.shuffle(q['alternativas'])
 
-    # 3. MONTAGEM CUIDADOSA
     for child in list(body):
         if not child.tag.endswith('sectPr'):
             body.remove(child)
@@ -192,7 +208,6 @@ def processar_prova_com_imagens(doc_original):
                 
         contador_questao += 1
 
-    # 4. IMPRIMINDO O GABARITO NO FINAL
     doc_original.add_page_break() 
     p_titulo = doc_original.add_paragraph()
     run_titulo = p_titulo.add_run("--- GABARITO ---")
