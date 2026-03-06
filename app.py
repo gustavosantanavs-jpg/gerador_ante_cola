@@ -8,7 +8,7 @@ from datetime import datetime
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
-    page_title="Sistema Anti-Cola Pro - Login",
+    page_title="Sistema Anti-Cola Pro",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -157,7 +157,7 @@ CSS_STYLE = """
 """
 
 # =========================================================================
-# ⚙️ MOTOR DE EMBARALHAMENTO
+# ⚙️ MOTOR DE EMBARALHAMENTO 
 # =========================================================================
 def atualizar_paragrafo(paragrafo, padrao, novo_texto, aplicar_negrito=False):
     texto_completo = paragrafo.text
@@ -289,10 +289,11 @@ def processar_prova_com_imagens(doc_original):
 
 st.markdown(CSS_STYLE, unsafe_allow_html=True)
 
+# Inicializa a memória de forma segura
 if 'logado' not in st.session_state:
     st.session_state['logado'] = False
-if 'login_user' not in st.session_state:
-    st.session_state['login_user'] = ""
+if 'usuario_ativo' not in st.session_state:
+    st.session_state['usuario_ativo'] = ""
 
 if not st.session_state['logado']:
     col1, col2, col3 = st.columns([1, 1.5, 1])
@@ -314,18 +315,19 @@ if not st.session_state['logado']:
         </div>
         """, unsafe_allow_html=True)
         
+        # Mudamos o 'key' para evitar conflito na memória do Streamlit
         st.markdown('<div class="input-wrapper"><div class="input-label">USUÁRIO</div><i class="fa-solid fa-user icon-field"></i>', unsafe_allow_html=True)
-        usuario_digitado = st.text_input("", key="input_user", placeholder="ex: milena").strip()
+        usuario_digitado = st.text_input("", key="campo_login", placeholder="ex: milena").strip()
         st.markdown('</div>', unsafe_allow_html=True)
         
         st.markdown('<div class="input-wrapper"><div class="input-label">SENHA</div><i class="fa-solid fa-lock icon-field"></i>', unsafe_allow_html=True)
-        senha_digitada = st.text_input("", key="input_pass", type="password", placeholder="").strip()
+        senha_digitada = st.text_input("", key="campo_senha", type="password", placeholder="").strip()
         st.markdown('</div>', unsafe_allow_html=True)
         
         if st.button("ENTRAR"):
             if usuario_digitado in USUARIOS_AUTORIZADOS and senha_digitada == USUARIOS_AUTORIZADOS[usuario_digitado]:
                 st.session_state['logado'] = True
-                st.session_state['login_user'] = usuario_digitado  # <-- AQUI ESTÁ A CORREÇÃO!
+                st.session_state['usuario_ativo'] = usuario_digitado
                 st.rerun()
             else:
                 st.error("🛑 Usuário ou senha incorretos. Tente novamente.")
@@ -337,11 +339,13 @@ if not st.session_state['logado']:
 else:
     col1, col2 = st.columns([0.8, 0.2])
     with col1:
-        st.title(f"🚀 Bem-vindo, {st.session_state['login_user']}!")
+        # Usa .get() para ser 100% à prova de falhas na leitura da memória
+        nome_exibicao = st.session_state.get('usuario_ativo', 'Professor(a)')
+        st.title(f"🚀 Bem-vindo(a), {nome_exibicao}!")
     with col2:
         if st.button("Sair do Sistema"):
             st.session_state['logado'] = False
-            st.session_state['login_user'] = ""
+            st.session_state['usuario_ativo'] = ""
             st.rerun()
             
     st.write("---")
