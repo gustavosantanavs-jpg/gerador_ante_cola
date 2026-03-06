@@ -7,7 +7,7 @@ import re
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Gerador Anti-Cola", page_icon="📝")
-st.title("📚 Gerador de Provas - Profa. Milena")
+st.title("📚 Gerador de Provas - Anti-Cola")
 st.write("Faça o upload da prova original em Word (.docx). O sistema irá embaralhar as questões, alternativas e manter as imagens (mesmo na mesma linha) intactas.")
 
 # --- FUNÇÃO CIRÚRGICA PARA MANTER IMAGENS E NEGRITO ---
