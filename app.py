@@ -6,7 +6,7 @@ import random
 import re
 from datetime import datetime
 
-# --- CONFIGURAÇÃO DA PÁGINA (Para ficar em tela cheia e moderna) ---
+# --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
     page_title="Sistema Anti-Cola Pro - Login",
     page_icon="🛡️",
@@ -24,29 +24,25 @@ USUARIOS_AUTORIZADOS = {
 }
 
 # =========================================================================
-# 🎨 ESTILIZAÇÃO AVANÇADA CORRIGIDA
+# 🎨 ESTILIZAÇÃO AVANÇADA
 # =========================================================================
 CSS_STYLE = """
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <style>
-    /* Esconde barra superior e rodapé padrão do Streamlit */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     
-    /* Puxa a tela para cima, tirando o espaço em branco gigante */
     .block-container {
         padding-top: 2rem !important;
         padding-bottom: 0rem !important;
     }
 
-    /* Fundo suave com grafismos abstratos e geométricos sutis */
     .stApp {
         background-color: #F8F9FB;
         background-image: linear-gradient(135deg, #F8F9FB 0%, #E3E9F2 100%);
         background-attachment: fixed;
     }
 
-    /* O Card Central de Login */
     .login-container {
         display: flex;
         justify-content: center;
@@ -64,7 +60,6 @@ CSS_STYLE = """
         text-align: center;
     }
 
-    /* Estilização da Logo e Títulos Comerciais */
     .logo-container {
         margin-bottom: 25px;
     }
@@ -97,7 +92,6 @@ CSS_STYLE = """
         margin-bottom: 25px;
     }
 
-    /* Estilização dos Campos de Entrada (com ícones embutidos) */
     .input-wrapper {
         position: relative;
         margin-bottom: 20px;
@@ -117,7 +111,6 @@ CSS_STYLE = """
         font-size: 1rem;
     }
     
-    /* Targetando o input real do Streamlit através do CSS */
     .stTextInput input {
         border-radius: 10px !important;
         border: 1px solid #E1E8F1 !important;
@@ -130,7 +123,6 @@ CSS_STYLE = """
         color: #A3B3C7;
     }
 
-    /* Estilização do Botão Azul "ENTRAR" */
     div.stButton > button:first-child {
         background-color: #1A73E8;
         color: white;
@@ -148,7 +140,6 @@ CSS_STYLE = """
         color: white;
     }
 
-    /* Rodapé Profissional Fixado */
     .app-footer {
         position: fixed;
         bottom: 0;
@@ -166,7 +157,7 @@ CSS_STYLE = """
 """
 
 # =========================================================================
-# ⚙️ MOTOR DE EMBARALHAMENTO (Inalterado)
+# ⚙️ MOTOR DE EMBARALHAMENTO
 # =========================================================================
 def atualizar_paragrafo(paragrafo, padrao, novo_texto, aplicar_negrito=False):
     texto_completo = paragrafo.text
@@ -300,6 +291,8 @@ st.markdown(CSS_STYLE, unsafe_allow_html=True)
 
 if 'logado' not in st.session_state:
     st.session_state['logado'] = False
+if 'login_user' not in st.session_state:
+    st.session_state['login_user'] = ""
 
 if not st.session_state['logado']:
     col1, col2, col3 = st.columns([1, 1.5, 1])
@@ -307,7 +300,6 @@ if not st.session_state['logado']:
     with col2:
         st.markdown('<div class="login-container"><div class="login-card">', unsafe_allow_html=True)
         
-        # O HTML corrigido do logo e título
         st.markdown("""
         <div class="logo-container">
             <div style="position: relative; display: inline-block;">
@@ -323,17 +315,17 @@ if not st.session_state['logado']:
         """, unsafe_allow_html=True)
         
         st.markdown('<div class="input-wrapper"><div class="input-label">USUÁRIO</div><i class="fa-solid fa-user icon-field"></i>', unsafe_allow_html=True)
-        usuario_digitado = st.text_input("", key="login_user", placeholder="ex: milena").strip()
+        usuario_digitado = st.text_input("", key="input_user", placeholder="ex: milena").strip()
         st.markdown('</div>', unsafe_allow_html=True)
         
         st.markdown('<div class="input-wrapper"><div class="input-label">SENHA</div><i class="fa-solid fa-lock icon-field"></i>', unsafe_allow_html=True)
-        senha_digitada = st.text_input("", key="login_pass", type="password", placeholder="").strip()
+        senha_digitada = st.text_input("", key="input_pass", type="password", placeholder="").strip()
         st.markdown('</div>', unsafe_allow_html=True)
         
         if st.button("ENTRAR"):
             if usuario_digitado in USUARIOS_AUTORIZADOS and senha_digitada == USUARIOS_AUTORIZADOS[usuario_digitado]:
                 st.session_state['logado'] = True
-                # Comando de recarregar a página atualizado
+                st.session_state['login_user'] = usuario_digitado  # <-- AQUI ESTÁ A CORREÇÃO!
                 st.rerun()
             else:
                 st.error("🛑 Usuário ou senha incorretos. Tente novamente.")
@@ -349,7 +341,7 @@ else:
     with col2:
         if st.button("Sair do Sistema"):
             st.session_state['logado'] = False
-            # Comando de recarregar a página atualizado
+            st.session_state['login_user'] = ""
             st.rerun()
             
     st.write("---")
