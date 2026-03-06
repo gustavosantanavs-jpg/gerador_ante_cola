@@ -4,14 +4,168 @@ from docx.text.paragraph import Paragraph
 import io
 import random
 import re
+from datetime import datetime
 
-# --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Gerador Anti-Cola", page_icon="📝")
-st.title("📚 Gerador de Provas - Profa. Milena")
-st.write("Faça o upload da prova original em Word (.docx). O sistema irá embaralhar as questões, alternativas e criar um Gabarito Automático no final.")
-st.info("⚠️ Lembre-se da regra de ouro: No arquivo original, a resposta CERTA deve ser sempre a PRIMEIRA alternativa (a letra 'a)'). O sistema vai rastrear onde ela for parar e montar o gabarito.")
+# --- CONFIGURAÇÃO DA PÁGINA (Para ficar em tela cheia e moderna) ---
+st.set_page_config(
+    page_title="Sistema Anti-Cola Pro - Login",
+    page_icon="🛡️",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
-# --- FUNÇÃO CIRÚRGICA PARA MANTER IMAGENS E NEGRITO ---
+# =========================================================================
+# 🔐 SEÇÃO DE SEGURANÇA - LISTA VIP DE ACESSO (O SEU CONTROLE)
+# =========================================================================
+# Quando você vender o acesso, adicione o novo usuário e senha aqui.
+# Formato: "usuario_exemplo": "senha_secreta_123",
+USUARIOS_AUTORIZADOS = {
+    "milena": "m1l3n@",
+    "gustavo": "g@p",
+    "unimam_admin": "uni123",
+}
+
+# =========================================================================
+# 🎨 ESTILIZAÇÃO AVANÇADA (O VISUAL PREMIUM DA IMAGEM)
+# =========================================================================
+# Esta técnica esconde o visual padrão do Streamlit e cria o layout
+# centralizado, card com sombra e fundo suave que você amou.
+# Utilizamos o FontAwesome para os ícones de usuário e cadeado.
+CSS_STYLE = """
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    /* Esconde barra superior e rodapé padrão do Streamlit */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    stApp {padding-top: 0px;}
+
+    /* Fundo suave com grafismos abstratos e geométricos sutis */
+    body {
+        background-color: #F8F9FB;
+        background-image: linear-gradient(135deg, #F8F9FB 0%, #E3E9F2 100%);
+        background-attachment: fixed;
+    }
+
+    /* O Card Central de Login (Design igual à imagem) */
+    .login-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        width: 100%;
+    }
+    .login-card {
+        background-color: #FFFFFF;
+        padding: 40px;
+        border-radius: 20px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        width: 100%;
+        max-width: 420px;
+        text-align: center;
+    }
+
+    /* Estilização da Logo e Títulos Comerciais */
+    .logo-container {
+        margin-bottom: 25px;
+    }
+    .logo-shield {
+        font-size: 5rem;
+        color: #1A3C6B;
+        text-shadow: 0 0 10px rgba(26, 60, 107, 0.2);
+    }
+    .mortarboard-glow {
+        font-size: 2.2rem;
+        color: #FFFFFF;
+        position: absolute;
+        top: 2.5rem;
+        left: 2rem;
+        text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+    }
+    .product-title {
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        font-size: 1.8rem;
+        color: #1A3C6B;
+        margin-top: 10px;
+        margin-bottom: 5px;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+    .product-tagline {
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        font-size: 0.95rem;
+        color: #6D84A4;
+        margin-bottom: 25px;
+    }
+
+    /* Estilização dos Campos de Entrada (com ícones embutidos) */
+    .input-wrapper {
+        position: relative;
+        margin-bottom: 20px;
+        text-align: left;
+    }
+    .input-label {
+        color: #6D84A4;
+        font-size: 0.85rem;
+        margin-bottom: 5px;
+    }
+    .icon-field {
+        position: absolute;
+        top: 2.1rem;
+        left: 15px;
+        color: #A3B3C7;
+        font-size: 1rem;
+    }
+    
+    /* Targetando o input real do Streamlit através do CSS */
+    .stTextInput input {
+        border-radius: 10px !important;
+        border: 1px solid #E1E8F1 !important;
+        background-color: #F8F9FB !important;
+        padding-left: 45px !important; /* Espaço para o ícone */
+        height: 45px !important;
+        font-size: 0.95rem !important;
+    }
+    .stTextInput input::placeholder {
+        color: #A3B3C7;
+    }
+
+    /* Estilização do Botão Azul "ENTRAR" */
+    div.stButton > button:first-child {
+        background-color: #1A73E8;
+        color: white;
+        border-radius: 10px;
+        border: none;
+        width: 100%;
+        height: 48px;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: background-color 0.3s ease;
+    }
+    div.stButton > button:first-child:hover {
+        background-color: #0E59C7;
+    }
+
+    /* Rodapé Profissional Fixado */
+    .app-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background-color: #F8F9FB;
+        padding: 15px 0;
+        border-top: 1px solid #E1E8F1;
+        text-align: center;
+        font-size: 0.85rem;
+        color: #A3B3C7;
+    }
+</style>
+"""
+
+# =========================================================================
+# ⚙️ FUNÇÕES AUXILIARES (O MOTOR DE EMBARALHAMENTO)
+# =========================================================================
+# Mantemos as mesmas funções que manipulam imagens e gabaritos
 def atualizar_paragrafo(paragrafo, padrao, novo_texto, aplicar_negrito=False):
     texto_completo = paragrafo.text
     match = padrao.match(texto_completo) 
@@ -45,7 +199,6 @@ def atualizar_paragrafo(paragrafo, padrao, novo_texto, aplicar_negrito=False):
         if aplicar_negrito:
             ultima_run_alterada.bold = True
 
-# --- MOTOR PRINCIPAL COM GABARITO ---
 def processar_prova_com_imagens(doc_original):
     padrao_questao = re.compile(r'^\s*(Questão\s*)?\d+[\.\-\:]?\s*', re.IGNORECASE)
     padrao_alternativa = re.compile(r'^\s*[a-e][\)\.\-]\s*', re.IGNORECASE)
@@ -108,7 +261,6 @@ def processar_prova_com_imagens(doc_original):
 
     contador_questao = 1
     for q in questoes:
-        # Cola e renumera a questão
         p_xml = q['enunciado'][0]
         body.append(p_xml)
         p_obj = Paragraph(p_xml, doc_original)
@@ -117,10 +269,8 @@ def processar_prova_com_imagens(doc_original):
         for el in q['enunciado'][1:]:
             body.append(el)
             
-        # Cola e renumera as alternativas
         for idx_alt, alt in enumerate(q['alternativas']):
             if alt['correta']:
-                # Se esta for a marcada como correta, salva a letra nova no dicionário
                 gabarito_final[contador_questao] = letras_maiusculas[idx_alt]
                 
             p_xml_alt = alt['blocos'][0]
@@ -133,8 +283,8 @@ def processar_prova_com_imagens(doc_original):
                 
         contador_questao += 1
 
-    # 4. IMPRIMINDO O GABARITO NO FINAL DO DOCUMENTO
-    doc_original.add_page_break() # Quebra de página para o gabarito ficar sozinho
+    # 4. GABARITO NO FINAL
+    doc_original.add_page_break()
     p_titulo = doc_original.add_paragraph()
     run_titulo = p_titulo.add_run("--- GABARITO ---")
     run_titulo.bold = True
@@ -145,29 +295,102 @@ def processar_prova_com_imagens(doc_original):
 
     return doc_original
 
-# --- INTERFACE ---
-arquivo_prova = st.file_uploader("Selecione o arquivo da prova (.docx)", type=["docx"])
-qtd_versoes = st.number_input("Quantas versões diferentes você quer gerar?", min_value=1, max_value=10, value=2)
+# =========================================================================
+# 🚧 APLICAÇÃO PRINCIPAL COM TRAVA DE SEGURANÇA
+# =========================================================================
 
-if arquivo_prova is not None:
-    if st.button("Embaralhar e Gerar Provas"):
-        with st.spinner("Embaralhando tudo e calculando os gabaritos..."):
-            try:
-                for i in range(int(qtd_versoes)):
-                    doc_base = Document(arquivo_prova)
-                    novo_doc = processar_prova_com_imagens(doc_base)
-                    
-                    buffer = io.BytesIO()
-                    novo_doc.save(buffer)
-                    buffer.seek(0)
-                    
-                    st.download_button(
-                        label=f"⬇️ Baixar Prova - Versão {i+1}",
-                        data=buffer,
-                        file_name=f"Prova_AntiCola_Versao_{i+1}.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                        key=f"download_{i}"
-                    )
-                st.success("✨ Sucesso! Provas geradas com formatação original e gabarito no final.")
-            except Exception as e:
-                st.error(f"Ocorreu um erro ao processar o arquivo. Erro técnico: {e}")
+# Injeta o estilo Premium
+st.markdown(CSS_STYLE, unsafe_allow_html=True)
+
+# Inicializa o estado de login
+if 'logado' not in st.session_state:
+    st.session_state['logado'] = False
+
+# 1. SE NÃO ESTIVER LOGADO -> MOSTRA A TELA DE LOGIN PROFISSIONAL
+if not st.session_state['logado']:
+    # Criação do Layout da imagem com colunas invisíveis
+    col1, col2, col3 = st.columns([1, 1.5, 1])
+    
+    with col2:
+        # Começa o Card de Login
+        st.markdown('<div class="login-container"><div class="login-card">', unsafe_allow_html=True)
+        
+        # A Mágica do Logo provisório
+        st.markdown("""
+        <div class="logo-container">
+            <div style="position: relative; display: inline-block;">
+                <i class="fa-solid fa-shield-halved logo-shield"></i>
+                <i class="fa-solid fa-graduation-cap mortarboard-glow"></i>
+                <div style="position: absolute; top: 1rem; left: 1rem; font-size: 2rem; color: #6D84A4;">
+                    <i class="fa-solid fa-rotate-right" style="position: absolute; top: 0.8rem; left: 1rem;"></i>
+                }
+            </div>
+            <div class="product-title">Sistema Anti-Cola Pro</div>
+            <div class="product-tagline">Plataforma de Geração de Provas Inteligentes</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Campos de Login com os radares de CSS
+        st.markdown('<div class="input-wrapper"><div class="input-label">USUÁRIO</div><i class="fa-solid fa-user icon-field"></i>', unsafe_allow_html=True)
+        usuario_digitado = st.text_input("", key="login_user", placeholder="ex: milena").strip()
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        st.markdown('<div class="input-wrapper"><div class="input-label">SENHA</div><i class="fa-solid fa-lock icon-field"></i>', unsafe_allow_html=True)
+        senha_digitada = st.text_input("", key="login_pass", type="password", placeholder="").strip()
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Botão de Login
+        if st.button("ENTRAR"):
+            if usuario_digitado in USUARIOS_AUTORIZADOS and senha_digitada == USUARIOS_AUTORIZADOS[usuario_digitado]:
+                st.session_state['logado'] = True
+                st.experimental_rerun()
+            else:
+                st.error("🛑 Usuário ou senha incorretos. Tente novamente ou contate o administrador.")
+        
+        # Fim do Card de Login
+        st.markdown('</div></div>', unsafe_allow_html=True)
+        
+    # Rodapé Profissional Fixado
+    st.markdown(f'<div class="app-footer">© {datetime.now().year} - Todos os direitos reservados | Sistema Anti-Cola Pro Versão 1.0</div>', unsafe_allow_html=True)
+
+# 2. SE ESTIVER LOGADO -> LIBERA O SISTEMA REAL (O MOTOR)
+else:
+    col1, col2 = st.columns([0.8, 0.2])
+    with col1:
+        st.title(f"🚀 Bem-vindo ao Sistema Anti-Cola Pro, {st.session_state['login_user']}!")
+    with col2:
+        # Botão de Sair no canto
+        if st.button("Sair do Sistema"):
+            st.session_state['logado'] = False
+            st.experimental_rerun()
+            
+    st.write("---")
+    st.info("⚠️ Lembre-se da regra de ouro: No arquivo original (.docx), a resposta CERTA deve ser sempre a PRIMEIRA alternativa (a letra 'a)'). O sistema vai rastrear onde ela for parar e montar o gabarito no final da prova.")
+
+    # A Interface que você já conhece
+    arquivo_prova = st.file_uploader("Selecione o arquivo da prova original (.docx)", type=["docx"])
+    qtd_versoes = st.number_input("Quantas versões diferentes você quer gerar?", min_value=1, max_value=10, value=2)
+
+    if arquivo_prova is not None:
+        if st.button("Embaralhar e Gerar Provas"):
+            with st.spinner("Embaralhando tudo e calculando os gabaritos..."):
+                try:
+                    for i in range(int(qtd_versoes)):
+                        # Lemos novamente para cada versão
+                        doc_base = Document(arquivo_prova)
+                        novo_doc = processar_prova_com_imagens(doc_base)
+                        
+                        buffer = io.BytesIO()
+                        novo_doc.save(buffer)
+                        buffer.seek(0)
+                        
+                        st.download_button(
+                            label=f"⬇️ Baixar Prova - Versão {i+1}",
+                            data=buffer,
+                            file_name=f"Prova_AntiCola_Versao_{i+1}.docx",
+                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                            key=f"download_{i}"
+                        )
+                    st.success("✨ Sucesso! Provas geradas com formatação original e gabarito na última página.")
+                except Exception as e:
+                    st.error(f"Ocorreu um erro ao processar o arquivo. Erro técnico: {e}")
