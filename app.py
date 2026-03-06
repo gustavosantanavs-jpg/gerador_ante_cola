@@ -4,161 +4,22 @@ from docx.text.paragraph import Paragraph
 import io
 import random
 import re
-from datetime import datetime
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(
-    page_title="Sistema Anti-Cola Pro",
-    page_icon="🛡️",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
+st.set_page_config(page_title="Sistema Anti-Cola Pro", page_icon="🎓")
 
-# =========================================================================
-# 🔐 SEÇÃO DE SEGURANÇA - LISTA VIP DE ACESSO
-# =========================================================================
-USUARIOS_AUTORIZADOS = {
-    "milena": "m1l3n@",
-    "gustavo": "g@p",
-    "unimam_admin": "uni123",
-}
+# --- IMAGEM DE TOPO ---
+# Tenta carregar a imagem. Se o arquivo ainda não estiver no GitHub, o site não quebra.
+try:
+    st.image("logo.png", use_container_width=True)
+except:
+    pass
 
-# =========================================================================
-# 🎨 ESTILIZAÇÃO AVANÇADA
-# =========================================================================
-CSS_STYLE = """
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-<style>
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    
-    .block-container {
-        padding-top: 2rem !important;
-        padding-bottom: 0rem !important;
-    }
+st.title("📚 Sistema Anti-Cola Pro - Profa. Milena")
+st.write("Faça o upload da prova original em Word (.docx). O sistema irá embaralhar as questões, alternativas e criar um Gabarito Automático no final.")
+st.info("⚠️ Regra de ouro: No arquivo original, a resposta CERTA deve ser sempre a PRIMEIRA alternativa (a letra 'a)').")
 
-    .stApp {
-        background-color: #F8F9FB;
-        background-image: linear-gradient(135deg, #F8F9FB 0%, #E3E9F2 100%);
-        background-attachment: fixed;
-    }
-
-    .login-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 80vh;
-        width: 100%;
-    }
-    .login-card {
-        background-color: #FFFFFF;
-        padding: 40px;
-        border-radius: 20px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-        width: 100%;
-        max-width: 420px;
-        text-align: center;
-    }
-
-    .logo-container {
-        margin-bottom: 25px;
-    }
-    .logo-shield {
-        font-size: 5rem;
-        color: #1A3C6B;
-        text-shadow: 0 0 10px rgba(26, 60, 107, 0.2);
-    }
-    .mortarboard-glow {
-        font-size: 2.2rem;
-        color: #FFFFFF;
-        position: absolute;
-        top: 2.5rem;
-        left: 2rem;
-        text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
-    }
-    .product-title {
-        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-        font-size: 1.8rem;
-        color: #1A3C6B;
-        margin-top: 10px;
-        margin-bottom: 5px;
-        font-weight: bold;
-        text-transform: uppercase;
-    }
-    .product-tagline {
-        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-        font-size: 0.95rem;
-        color: #6D84A4;
-        margin-bottom: 25px;
-    }
-
-    .input-wrapper {
-        position: relative;
-        margin-bottom: 20px;
-        text-align: left;
-    }
-    .input-label {
-        color: #6D84A4;
-        font-size: 0.85rem;
-        margin-bottom: 5px;
-        font-weight: bold;
-    }
-    .icon-field {
-        position: absolute;
-        top: 2.1rem;
-        left: 15px;
-        color: #A3B3C7;
-        font-size: 1rem;
-    }
-    
-    .stTextInput input {
-        border-radius: 10px !important;
-        border: 1px solid #E1E8F1 !important;
-        background-color: #F8F9FB !important;
-        padding-left: 45px !important; 
-        height: 45px !important;
-        font-size: 0.95rem !important;
-    }
-    .stTextInput input::placeholder {
-        color: #A3B3C7;
-    }
-
-    div.stButton > button:first-child {
-        background-color: #1A73E8;
-        color: white;
-        border-radius: 10px;
-        border: none;
-        width: 100%;
-        height: 48px;
-        font-weight: bold;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        transition: background-color 0.3s ease;
-    }
-    div.stButton > button:first-child:hover {
-        background-color: #0E59C7;
-        color: white;
-    }
-
-    .app-footer {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        background-color: #F8F9FB;
-        padding: 15px 0;
-        border-top: 1px solid #E1E8F1;
-        text-align: center;
-        font-size: 0.85rem;
-        color: #A3B3C7;
-        z-index: 99;
-    }
-</style>
-"""
-
-# =========================================================================
-# ⚙️ MOTOR DE EMBARALHAMENTO 
-# =========================================================================
+# --- FUNÇÃO CIRÚRGICA PARA MANTER IMAGENS E NEGRITO ---
 def atualizar_paragrafo(paragrafo, padrao, novo_texto, aplicar_negrito=False):
     texto_completo = paragrafo.text
     match = padrao.match(texto_completo) 
@@ -192,6 +53,7 @@ def atualizar_paragrafo(paragrafo, padrao, novo_texto, aplicar_negrito=False):
         if aplicar_negrito:
             ultima_run_alterada.bold = True
 
+# --- MOTOR PRINCIPAL COM GABARITO ---
 def processar_prova_com_imagens(doc_original):
     padrao_questao = re.compile(r'^\s*(Questão\s*)?\d+[\.\-\:]?\s*', re.IGNORECASE)
     padrao_alternativa = re.compile(r'^\s*[a-e][\)\.\-]\s*', re.IGNORECASE)
@@ -203,6 +65,7 @@ def processar_prova_com_imagens(doc_original):
     alternativa_atual = None
     cabecalho = []
     
+    # 1. ESCANEAMENTO AVANÇADO E MARCAÇÃO DA RESPOSTA CERTA
     for element in list(body):
         if element.tag.endswith('sectPr'):
             continue
@@ -233,10 +96,12 @@ def processar_prova_com_imagens(doc_original):
             else:
                 cabecalho.append(element)
 
+    # 2. EMBARALHAMENTO
     random.shuffle(questoes)
     for q in questoes:
         random.shuffle(q['alternativas'])
 
+    # 3. MONTAGEM CUIDADOSA
     for child in list(body):
         if not child.tag.endswith('sectPr'):
             body.remove(child)
@@ -272,7 +137,8 @@ def processar_prova_com_imagens(doc_original):
                 
         contador_questao += 1
 
-    doc_original.add_page_break()
+    # 4. IMPRIMINDO O GABARITO NO FINAL
+    doc_original.add_page_break() 
     p_titulo = doc_original.add_paragraph()
     run_titulo = p_titulo.add_run("--- GABARITO ---")
     run_titulo.bold = True
@@ -283,96 +149,29 @@ def processar_prova_com_imagens(doc_original):
 
     return doc_original
 
-# =========================================================================
-# 🚧 APLICAÇÃO PRINCIPAL COM TRAVA DE SEGURANÇA
-# =========================================================================
+# --- INTERFACE ---
+arquivo_prova = st.file_uploader("Selecione o arquivo da prova (.docx)", type=["docx"])
+qtd_versoes = st.number_input("Quantas versões diferentes você quer gerar?", min_value=1, max_value=10, value=2)
 
-st.markdown(CSS_STYLE, unsafe_allow_html=True)
-
-# Inicializa a memória de forma segura
-if 'logado' not in st.session_state:
-    st.session_state['logado'] = False
-if 'usuario_ativo' not in st.session_state:
-    st.session_state['usuario_ativo'] = ""
-
-if not st.session_state['logado']:
-    col1, col2, col3 = st.columns([1, 1.5, 1])
-    
-    with col2:
-        st.markdown('<div class="login-container"><div class="login-card">', unsafe_allow_html=True)
-        
-        st.markdown("""
-        <div class="logo-container">
-            <div style="position: relative; display: inline-block;">
-                <i class="fa-solid fa-shield-halved logo-shield"></i>
-                <i class="fa-solid fa-graduation-cap mortarboard-glow"></i>
-                <div style="position: absolute; top: 1rem; left: 1rem; font-size: 2rem; color: #6D84A4;">
-                    <i class="fa-solid fa-rotate-right" style="position: absolute; top: 0.8rem; left: 1rem;"></i>
-                </div>
-            </div>
-            <div class="product-title">Sistema Anti-Cola Pro</div>
-            <div class="product-tagline">Plataforma de Geração de Provas Inteligentes</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Mudamos o 'key' para evitar conflito na memória do Streamlit
-        st.markdown('<div class="input-wrapper"><div class="input-label">USUÁRIO</div><i class="fa-solid fa-user icon-field"></i>', unsafe_allow_html=True)
-        usuario_digitado = st.text_input("", key="campo_login", placeholder="ex: milena").strip()
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        st.markdown('<div class="input-wrapper"><div class="input-label">SENHA</div><i class="fa-solid fa-lock icon-field"></i>', unsafe_allow_html=True)
-        senha_digitada = st.text_input("", key="campo_senha", type="password", placeholder="").strip()
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        if st.button("ENTRAR"):
-            if usuario_digitado in USUARIOS_AUTORIZADOS and senha_digitada == USUARIOS_AUTORIZADOS[usuario_digitado]:
-                st.session_state['logado'] = True
-                st.session_state['usuario_ativo'] = usuario_digitado
-                st.rerun()
-            else:
-                st.error("🛑 Usuário ou senha incorretos. Tente novamente.")
-        
-        st.markdown('</div></div>', unsafe_allow_html=True)
-        
-    st.markdown(f'<div class="app-footer">© {datetime.now().year} - Todos os direitos reservados | Sistema Anti-Cola Pro Versão 1.0</div>', unsafe_allow_html=True)
-
-else:
-    col1, col2 = st.columns([0.8, 0.2])
-    with col1:
-        # Usa .get() para ser 100% à prova de falhas na leitura da memória
-        nome_exibicao = st.session_state.get('usuario_ativo', 'Professor(a)')
-        st.title(f"🚀 Bem-vindo(a), {nome_exibicao}!")
-    with col2:
-        if st.button("Sair do Sistema"):
-            st.session_state['logado'] = False
-            st.session_state['usuario_ativo'] = ""
-            st.rerun()
-            
-    st.write("---")
-    st.info("⚠️ No arquivo original (.docx), a resposta CERTA deve ser sempre a PRIMEIRA alternativa (a letra 'a)').")
-
-    arquivo_prova = st.file_uploader("Selecione o arquivo da prova original (.docx)", type=["docx"])
-    qtd_versoes = st.number_input("Quantas versões diferentes você quer gerar?", min_value=1, max_value=10, value=2)
-
-    if arquivo_prova is not None:
-        if st.button("Embaralhar e Gerar Provas"):
-            with st.spinner("Embaralhando tudo e calculando os gabaritos..."):
-                try:
-                    for i in range(int(qtd_versoes)):
-                        doc_base = Document(arquivo_prova)
-                        novo_doc = processar_prova_com_imagens(doc_base)
-                        
-                        buffer = io.BytesIO()
-                        novo_doc.save(buffer)
-                        buffer.seek(0)
-                        
-                        st.download_button(
-                            label=f"⬇️ Baixar Prova - Versão {i+1}",
-                            data=buffer,
-                            file_name=f"Prova_AntiCola_Versao_{i+1}.docx",
-                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                            key=f"download_{i}"
-                        )
-                    st.success("✨ Sucesso! Provas geradas com formatação original e gabarito na última página.")
-                except Exception as e:
-                    st.error(f"Ocorreu um erro ao processar o arquivo. Erro técnico: {e}")
+if arquivo_prova is not None:
+    if st.button("Embaralhar e Gerar Provas"):
+        with st.spinner("Embaralhando tudo e calculando os gabaritos..."):
+            try:
+                for i in range(int(qtd_versoes)):
+                    doc_base = Document(arquivo_prova)
+                    novo_doc = processar_prova_com_imagens(doc_base)
+                    
+                    buffer = io.BytesIO()
+                    novo_doc.save(buffer)
+                    buffer.seek(0)
+                    
+                    st.download_button(
+                        label=f"⬇️ Baixar Prova - Versão {i+1}",
+                        data=buffer,
+                        file_name=f"Prova_AntiCola_Versao_{i+1}.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        key=f"download_{i}"
+                    )
+                st.success("✨ Sucesso! Provas geradas com formatação original e gabarito no final.")
+            except Exception as e:
+                st.error(f"Ocorreu um erro ao processar o arquivo. Erro técnico: {e}")
