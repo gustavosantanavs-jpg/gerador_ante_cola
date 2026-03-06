@@ -15,10 +15,8 @@ st.set_page_config(
 )
 
 # =========================================================================
-# 🔐 SEÇÃO DE SEGURANÇA - LISTA VIP DE ACESSO (O SEU CONTROLE)
+# 🔐 SEÇÃO DE SEGURANÇA - LISTA VIP DE ACESSO
 # =========================================================================
-# Quando você vender o acesso, adicione o novo usuário e senha aqui.
-# Formato: "usuario_exemplo": "senha_secreta_123",
 USUARIOS_AUTORIZADOS = {
     "milena": "m1l3n@",
     "gustavo": "g@p",
@@ -26,32 +24,34 @@ USUARIOS_AUTORIZADOS = {
 }
 
 # =========================================================================
-# 🎨 ESTILIZAÇÃO AVANÇADA (O VISUAL PREMIUM DA IMAGEM)
+# 🎨 ESTILIZAÇÃO AVANÇADA CORRIGIDA
 # =========================================================================
-# Esta técnica esconde o visual padrão do Streamlit e cria o layout
-# centralizado, card com sombra e fundo suave que você amou.
-# Utilizamos o FontAwesome para os ícones de usuário e cadeado.
 CSS_STYLE = """
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <style>
     /* Esconde barra superior e rodapé padrão do Streamlit */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    stApp {padding-top: 0px;}
+    
+    /* Puxa a tela para cima, tirando o espaço em branco gigante */
+    .block-container {
+        padding-top: 2rem !important;
+        padding-bottom: 0rem !important;
+    }
 
     /* Fundo suave com grafismos abstratos e geométricos sutis */
-    body {
+    .stApp {
         background-color: #F8F9FB;
         background-image: linear-gradient(135deg, #F8F9FB 0%, #E3E9F2 100%);
         background-attachment: fixed;
     }
 
-    /* O Card Central de Login (Design igual à imagem) */
+    /* O Card Central de Login */
     .login-container {
         display: flex;
         justify-content: center;
         align-items: center;
-        height: 100vh;
+        min-height: 80vh;
         width: 100%;
     }
     .login-card {
@@ -107,6 +107,7 @@ CSS_STYLE = """
         color: #6D84A4;
         font-size: 0.85rem;
         margin-bottom: 5px;
+        font-weight: bold;
     }
     .icon-field {
         position: absolute;
@@ -121,7 +122,7 @@ CSS_STYLE = """
         border-radius: 10px !important;
         border: 1px solid #E1E8F1 !important;
         background-color: #F8F9FB !important;
-        padding-left: 45px !important; /* Espaço para o ícone */
+        padding-left: 45px !important; 
         height: 45px !important;
         font-size: 0.95rem !important;
     }
@@ -144,6 +145,7 @@ CSS_STYLE = """
     }
     div.stButton > button:first-child:hover {
         background-color: #0E59C7;
+        color: white;
     }
 
     /* Rodapé Profissional Fixado */
@@ -158,14 +160,14 @@ CSS_STYLE = """
         text-align: center;
         font-size: 0.85rem;
         color: #A3B3C7;
+        z-index: 99;
     }
 </style>
 """
 
 # =========================================================================
-# ⚙️ FUNÇÕES AUXILIARES (O MOTOR DE EMBARALHAMENTO)
+# ⚙️ MOTOR DE EMBARALHAMENTO (Inalterado)
 # =========================================================================
-# Mantemos as mesmas funções que manipulam imagens e gabaritos
 def atualizar_paragrafo(paragrafo, padrao, novo_texto, aplicar_negrito=False):
     texto_completo = paragrafo.text
     match = padrao.match(texto_completo) 
@@ -210,7 +212,6 @@ def processar_prova_com_imagens(doc_original):
     alternativa_atual = None
     cabecalho = []
     
-    # 1. ESCANEAMENTO AVANÇADO E MARCAÇÃO DA RESPOSTA CERTA
     for element in list(body):
         if element.tag.endswith('sectPr'):
             continue
@@ -229,7 +230,6 @@ def processar_prova_com_imagens(doc_original):
             alternativa_atual = None
             
         elif is_paragraph and padrao_alternativa.match(texto) and questao_atual is not None:
-            # A mágica do gabarito: Se a lista de alternativas estiver vazia, esta é a primeira (a correta)
             is_correct = (len(questao_atual['alternativas']) == 0)
             alternativa_atual = {'blocos': [element], 'correta': is_correct}
             questao_atual['alternativas'].append(alternativa_atual)
@@ -242,12 +242,10 @@ def processar_prova_com_imagens(doc_original):
             else:
                 cabecalho.append(element)
 
-    # 2. EMBARALHAMENTO
     random.shuffle(questoes)
     for q in questoes:
         random.shuffle(q['alternativas'])
 
-    # 3. MONTAGEM CUIDADOSA
     for child in list(body):
         if not child.tag.endswith('sectPr'):
             body.remove(child)
@@ -283,7 +281,6 @@ def processar_prova_com_imagens(doc_original):
                 
         contador_questao += 1
 
-    # 4. GABARITO NO FINAL
     doc_original.add_page_break()
     p_titulo = doc_original.add_paragraph()
     run_titulo = p_titulo.add_run("--- GABARITO ---")
@@ -299,23 +296,18 @@ def processar_prova_com_imagens(doc_original):
 # 🚧 APLICAÇÃO PRINCIPAL COM TRAVA DE SEGURANÇA
 # =========================================================================
 
-# Injeta o estilo Premium
 st.markdown(CSS_STYLE, unsafe_allow_html=True)
 
-# Inicializa o estado de login
 if 'logado' not in st.session_state:
     st.session_state['logado'] = False
 
-# 1. SE NÃO ESTIVER LOGADO -> MOSTRA A TELA DE LOGIN PROFISSIONAL
 if not st.session_state['logado']:
-    # Criação do Layout da imagem com colunas invisíveis
     col1, col2, col3 = st.columns([1, 1.5, 1])
     
     with col2:
-        # Começa o Card de Login
         st.markdown('<div class="login-container"><div class="login-card">', unsafe_allow_html=True)
         
-        # A Mágica do Logo provisório
+        # O HTML corrigido do logo e título
         st.markdown("""
         <div class="logo-container">
             <div style="position: relative; display: inline-block;">
@@ -323,14 +315,13 @@ if not st.session_state['logado']:
                 <i class="fa-solid fa-graduation-cap mortarboard-glow"></i>
                 <div style="position: absolute; top: 1rem; left: 1rem; font-size: 2rem; color: #6D84A4;">
                     <i class="fa-solid fa-rotate-right" style="position: absolute; top: 0.8rem; left: 1rem;"></i>
-                }
+                </div>
             </div>
             <div class="product-title">Sistema Anti-Cola Pro</div>
             <div class="product-tagline">Plataforma de Geração de Provas Inteligentes</div>
         </div>
         """, unsafe_allow_html=True)
         
-        # Campos de Login com os radares de CSS
         st.markdown('<div class="input-wrapper"><div class="input-label">USUÁRIO</div><i class="fa-solid fa-user icon-field"></i>', unsafe_allow_html=True)
         usuario_digitado = st.text_input("", key="login_user", placeholder="ex: milena").strip()
         st.markdown('</div>', unsafe_allow_html=True)
@@ -339,35 +330,31 @@ if not st.session_state['logado']:
         senha_digitada = st.text_input("", key="login_pass", type="password", placeholder="").strip()
         st.markdown('</div>', unsafe_allow_html=True)
         
-        # Botão de Login
         if st.button("ENTRAR"):
             if usuario_digitado in USUARIOS_AUTORIZADOS and senha_digitada == USUARIOS_AUTORIZADOS[usuario_digitado]:
                 st.session_state['logado'] = True
-                st.experimental_rerun()
+                # Comando de recarregar a página atualizado
+                st.rerun()
             else:
-                st.error("🛑 Usuário ou senha incorretos. Tente novamente ou contate o administrador.")
+                st.error("🛑 Usuário ou senha incorretos. Tente novamente.")
         
-        # Fim do Card de Login
         st.markdown('</div></div>', unsafe_allow_html=True)
         
-    # Rodapé Profissional Fixado
     st.markdown(f'<div class="app-footer">© {datetime.now().year} - Todos os direitos reservados | Sistema Anti-Cola Pro Versão 1.0</div>', unsafe_allow_html=True)
 
-# 2. SE ESTIVER LOGADO -> LIBERA O SISTEMA REAL (O MOTOR)
 else:
     col1, col2 = st.columns([0.8, 0.2])
     with col1:
-        st.title(f"🚀 Bem-vindo ao Sistema Anti-Cola Pro, {st.session_state['login_user']}!")
+        st.title(f"🚀 Bem-vindo, {st.session_state['login_user']}!")
     with col2:
-        # Botão de Sair no canto
         if st.button("Sair do Sistema"):
             st.session_state['logado'] = False
-            st.experimental_rerun()
+            # Comando de recarregar a página atualizado
+            st.rerun()
             
     st.write("---")
-    st.info("⚠️ Lembre-se da regra de ouro: No arquivo original (.docx), a resposta CERTA deve ser sempre a PRIMEIRA alternativa (a letra 'a)'). O sistema vai rastrear onde ela for parar e montar o gabarito no final da prova.")
+    st.info("⚠️ No arquivo original (.docx), a resposta CERTA deve ser sempre a PRIMEIRA alternativa (a letra 'a)').")
 
-    # A Interface que você já conhece
     arquivo_prova = st.file_uploader("Selecione o arquivo da prova original (.docx)", type=["docx"])
     qtd_versoes = st.number_input("Quantas versões diferentes você quer gerar?", min_value=1, max_value=10, value=2)
 
@@ -376,7 +363,6 @@ else:
             with st.spinner("Embaralhando tudo e calculando os gabaritos..."):
                 try:
                     for i in range(int(qtd_versoes)):
-                        # Lemos novamente para cada versão
                         doc_base = Document(arquivo_prova)
                         novo_doc = processar_prova_com_imagens(doc_base)
                         
