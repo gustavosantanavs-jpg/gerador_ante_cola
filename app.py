@@ -1,6 +1,5 @@
 import streamlit as st
 from docx import Document
-from docx.text.paragraph import Paragraph
 import io
 import random
 import re
@@ -82,37 +81,60 @@ st.markdown('''
 st.title("📚 Sistema Anti-Cola Pro - Profa. Milena")
 st.write("Faça o upload da prova original em Word (.docx). O sistema irá embaralhar as questões e alternativas.")
 
-def atualizar_paragrafo(paragrafo, padrao, novo_texto, aplicar_negrito=False):
-    texto_completo = paragrafo.text
+# --- CIRURGIA PROFUNDA NO XML (Resolve o fantasma das letras travadas) ---
+def atualizar_paragrafo(paragrafo_xml, padrao, novo_texto, aplicar_negrito=False):
+    text_elements = paragrafo_xml.findall('.//w:t', namespaces=paragrafo_xml.nsmap)
+    texto_completo = ""
+    for t in text_elements:
+        if t.text:
+            texto_completo += t.text
+            
     match = padrao.match(texto_completo) 
     if not match: return
+    
     tamanho_padrao = match.end()
     texto_acumulado = ""
     runs_modificadas = False
-    ultima_run_alterada = None
-    for run in paragrafo.runs:
-        texto_original = run.text
+    ultimo_t_alterado = None
+    
+    for t in text_elements:
+        texto_original = t.text
         if not texto_original: 
             continue
+            
         if not runs_modificadas:
             texto_acumulado += texto_original
-            ultima_run_alterada = run
+            ultimo_t_alterado = t
+            
             if len(texto_acumulado) <= tamanho_padrao:
-                run.text = "" 
+                t.text = "" 
             else:
                 sobra = texto_acumulado[tamanho_padrao:]
-                run.text = novo_texto + sobra
-                if aplicar_negrito:
-                    run.bold = True
+                t.text = novo_texto + sobra
                 runs_modificadas = True
-    if not runs_modificadas and ultima_run_alterada is not None:
-        ultima_run_alterada.text = novo_texto
-        if aplicar_negrito:
-            ultima_run_alterada.bold = True
+                
+    if not runs_modificadas and ultimo_t_alterado is not None:
+        ultimo_t_alterado.text = novo_texto
+
+    if aplicar_negrito and ultimo_t_alterado is not None:
+        try:
+            r = ultimo_t_alterado.getparent()
+            if r is not None and r.tag.endswith('r'):
+                rPr = r.find('.//w:rPr', namespaces=r.nsmap)
+                if rPr is None:
+                    rPr = r.makeelement('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}rPr')
+                    r.insert(0, rPr)
+                b = rPr.find('.//w:b', namespaces=r.nsmap)
+                if b is None:
+                    b = r.makeelement('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}b')
+                    rPr.append(b)
+        except Exception:
+            pass
 
 def processar_prova_com_imagens(doc_original, gerar_gabarito):
     padrao_questao = re.compile(r'^\s*(Questão\s*)?\d+[\.\-\:]?\s*', re.IGNORECASE)
-    padrao_alternativa = re.compile(r'^\s*[a-e][\)\.\-]\s*', re.IGNORECASE)
+    # Radar ampliado para ir até a letra 'j' caso haja muitas alternativas
+    padrao_alternativa = re.compile(r'^\s*[a-j][\)\.\-]\s*', re.IGNORECASE)
 
     body = doc_original.element.body
     questoes = []
@@ -160,15 +182,14 @@ def processar_prova_com_imagens(doc_original, gerar_gabarito):
         body.append(el)
 
     gabarito_final = {}
-    letras_maiusculas = ['A', 'B', 'C', 'D', 'E', 'F']
-    letras_formatadas = ['a) ', 'b) ', 'c) ', 'd) ', 'e) ', 'f) ']
+    letras_maiusculas = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
+    letras_formatadas = ['a) ', 'b) ', 'c) ', 'd) ', 'e) ', 'f) ', 'g) ', 'h) ', 'i) ', 'j) ']
 
     contador_questao = 1
     for q in questoes:
         p_xml = q['enunciado'][0]
         body.append(p_xml)
-        p_obj = Paragraph(p_xml, doc_original)
-        atualizar_paragrafo(p_obj, padrao_questao, f"Questão {contador_questao}: ", aplicar_negrito=True)
+        atualizar_paragrafo(p_xml, padrao_questao, f"Questão {contador_questao}: ", aplicar_negrito=True)
         for el in q['enunciado'][1:]:
             body.append(el)
         for idx_alt, alt in enumerate(q['alternativas']):
@@ -176,8 +197,8 @@ def processar_prova_com_imagens(doc_original, gerar_gabarito):
                 gabarito_final[contador_questao] = letras_maiusculas[idx_alt]
             p_xml_alt = alt['blocos'][0]
             body.append(p_xml_alt)
-            p_obj_alt = Paragraph(p_xml_alt, doc_original)
-            atualizar_paragrafo(p_obj_alt, padrao_alternativa, letras_formatadas[idx_alt], aplicar_negrito=False)
+            # Agora injeta a letra nova corretamente ignorando bloqueios
+            atualizar_paragrafo(p_xml_alt, padrao_alternativa, letras_formatadas[idx_alt], aplicar_negrito=False)
             for el in alt['blocos'][1:]:
                 body.append(el)
         contador_questao += 1
