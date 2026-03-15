@@ -1,5 +1,6 @@
 import streamlit as st
 from docx import Document
+from docx.oxml.shared import OxmlElement
 import io
 import random
 import re
@@ -81,59 +82,67 @@ st.markdown('''
 st.title("📚 Sistema Anti-Cola Pro - Profa. Milena")
 st.write("Faça o upload da prova original em Word (.docx). O sistema irá embaralhar as questões e alternativas.")
 
-# --- CIRURGIA PROFUNDA NO XML (Resolve o fantasma das letras travadas) ---
+with st.expander("📖 Guia Rápido: Como usar o Sistema (Clique para abrir)", expanded=False):
+    st.markdown("""
+    ### Passo 1: Preparando o Word (A Regra de Ouro) 🥇
+    * **Alternativas sempre em linhas separadas:** Para o robô misturar as letras `a) b) c)`, cada uma precisa estar em uma linha própria (dê 'Enter' após cada alternativa). Se estiverem na mesma linha, ele não consegue separá-las!
+    * **Gabarito:** Se quiser que o sistema gere o **Gabarito Automático**, coloque a resposta CORRETA sempre na **letra a**.
+    * Use o padrão: `1. ` ou `Questão 1: ` para perguntas, e `a) `, `b) ` para alternativas.
+
+    ### Passo 2: Fazendo o Upload ☁️
+    * Arraste o seu arquivo Word (`.docx`) para a caixa tracejada.
+
+    ### Passo 3: Configurando a Prova ⚙️
+    * **Quantidade:** Escolha quantas versões diferentes quer gerar.
+    * **Gabarito:** Marque a caixinha *"Gerar Gabarito Automático"* **APENAS** se construiu a prova seguindo o Passo 1.
+
+    ### Passo 4: A Mágica! 🪄
+    * Clique no botão azul **"Embaralhar e Gerar Provas"**.
+    """)
+st.markdown("---")
+
 def atualizar_paragrafo(paragrafo_xml, padrao, novo_texto, aplicar_negrito=False):
     text_elements = paragrafo_xml.findall('.//w:t', namespaces=paragrafo_xml.nsmap)
-    texto_completo = ""
-    for t in text_elements:
-        if t.text:
-            texto_completo += t.text
+    texto_completo = "".join([t.text for t in text_elements if t.text])
             
     match = padrao.match(texto_completo) 
     if not match: return
     
     tamanho_padrao = match.end()
     texto_acumulado = ""
-    runs_modificadas = False
-    ultimo_t_alterado = None
     
     for t in text_elements:
         texto_original = t.text
-        if not texto_original: 
-            continue
+        if not texto_original: continue
             
-        if not runs_modificadas:
-            texto_acumulado += texto_original
-            ultimo_t_alterado = t
+        texto_acumulado += texto_original
+        if len(texto_acumulado) <= tamanho_padrao:
+            t.text = "" 
+        else:
+            sobra = texto_acumulado[tamanho_padrao:]
+            t.text = sobra
+            break 
             
-            if len(texto_acumulado) <= tamanho_padrao:
-                t.text = "" 
-            else:
-                sobra = texto_acumulado[tamanho_padrao:]
-                t.text = novo_texto + sobra
-                runs_modificadas = True
-                
-    if not runs_modificadas and ultimo_t_alterado is not None:
-        ultimo_t_alterado.text = novo_texto
-
-    if aplicar_negrito and ultimo_t_alterado is not None:
-        try:
-            r = ultimo_t_alterado.getparent()
-            if r is not None and r.tag.endswith('r'):
-                rPr = r.find('.//w:rPr', namespaces=r.nsmap)
-                if rPr is None:
-                    rPr = r.makeelement('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}rPr')
-                    r.insert(0, rPr)
-                b = rPr.find('.//w:b', namespaces=r.nsmap)
-                if b is None:
-                    b = r.makeelement('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}b')
-                    rPr.append(b)
-        except Exception:
-            pass
+    new_r = OxmlElement('w:r')
+    if aplicar_negrito:
+        rPr = OxmlElement('w:rPr')
+        b = OxmlElement('w:b')
+        rPr.append(b)
+        new_r.append(rPr)
+        
+    new_t = OxmlElement('w:t')
+    new_t.text = novo_texto
+    new_t.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
+    new_r.append(new_t)
+    
+    runs = paragrafo_xml.findall('.//w:r', namespaces=paragrafo_xml.nsmap)
+    if runs:
+        runs[0].addprevious(new_r)
+    else:
+        paragrafo_xml.append(new_r)
 
 def processar_prova_com_imagens(doc_original, gerar_gabarito):
     padrao_questao = re.compile(r'^\s*(Questão\s*)?\d+[\.\-\:]?\s*', re.IGNORECASE)
-    # Radar ampliado para ir até a letra 'j' caso haja muitas alternativas
     padrao_alternativa = re.compile(r'^\s*[a-j][\)\.\-]\s*', re.IGNORECASE)
 
     body = doc_original.element.body
@@ -197,7 +206,6 @@ def processar_prova_com_imagens(doc_original, gerar_gabarito):
                 gabarito_final[contador_questao] = letras_maiusculas[idx_alt]
             p_xml_alt = alt['blocos'][0]
             body.append(p_xml_alt)
-            # Agora injeta a letra nova corretamente ignorando bloqueios
             atualizar_paragrafo(p_xml_alt, padrao_alternativa, letras_formatadas[idx_alt], aplicar_negrito=False)
             for el in alt['blocos'][1:]:
                 body.append(el)
